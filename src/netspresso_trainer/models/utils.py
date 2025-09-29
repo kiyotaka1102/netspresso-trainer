@@ -236,23 +236,6 @@ def load_from_checkpoint(
         logger.info(f"Pretrained model for {model_name} is loaded from: {model_checkpoint}")
 
     model_state_dict = load_checkpoint(model_checkpoint)
-
-    new_state_dict = {}
-    necks = []
-    for key in model_state_dict:
-        if key in model.state_dict():
-            new_state_dict[key] = model_state_dict[key]
-        else:
-            necks.append(key)
-    
-    model_neck_keys = list(filter(lambda x: "neck." in x, list(model.state_dict().keys())))
-
-    for key1, key2 in zip(necks, model_neck_keys):
-        print(key1)
-
-        
-
-
     if not load_checkpoint_head:
         logger.info("-"*40)
         logger.info("Head weights are not loaded because model.checkpoint.load_head is set to False")
