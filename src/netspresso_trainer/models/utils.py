@@ -151,10 +151,10 @@ MODEL_CHECKPOINT_URL_DICT = {
         "coco": "https://netspresso-trainer-public.s3.ap-northeast-2.amazonaws.com/checkpoint/yolov9/yolov9_c_coco.safetensors?versionId=TDZWEU8pi_c0ZHPS_U073BoqXaUFCviN",
     },
     'rtdetr_res18': {
-        'coco': "https://netspresso-trainer-public.s3.ap-northeast-2.amazonaws.com/checkpoint/rtdetr/rtdetr_res18_coco.safetensors?versionId=uu9v49NI6rQx8wOY6bJbEXUFOG_R9xqH",
+        'coco': "https://netspresso-trainer-public.s3.ap-northeast-2.amazonaws.com/checkpoint/rtdetr/rtdetr_res18_coco.safetensors?versionId=9uegrNukkbp5ySO4vC52WPFhUEbEpEbD",
     },
     'rtdetr_res50': {
-        'coco': "https://netspresso-trainer-public.s3.ap-northeast-2.amazonaws.com/checkpoint/rtdetr/rtdetr_res50_coco.safetensors?versionId=JHmnjY13BEflpnDCYPFJ1c17UwpqDrLQ",
+        'coco': "https://netspresso-trainer-public.s3.ap-northeast-2.amazonaws.com/checkpoint/rtdetr/rtdetr_res50_coco.safetensors?versionId=ZwwBP5C9CE2oRoBJy5Gjr7aTFMAb2hdz",
     },
     'yolo_fastest_v2': {
         'coco': "https://netspresso-trainer-public.s3.ap-northeast-2.amazonaws.com/checkpoint/yolofastest/yolo_fastest_v2_coco.safetensors?versionId=CGhNjiZygGVjtHm0M586DzQ6.2FqWvl1"
@@ -236,6 +236,23 @@ def load_from_checkpoint(
         logger.info(f"Pretrained model for {model_name} is loaded from: {model_checkpoint}")
 
     model_state_dict = load_checkpoint(model_checkpoint)
+
+    new_state_dict = {}
+    necks = []
+    for key in model_state_dict:
+        if key in model.state_dict():
+            new_state_dict[key] = model_state_dict[key]
+        else:
+            necks.append(key)
+    
+    model_neck_keys = list(filter(lambda x: "neck." in x, list(model.state_dict().keys())))
+
+    for key1, key2 in zip(necks, model_neck_keys):
+        print(key1)
+
+        
+
+
     if not load_checkpoint_head:
         logger.info("-"*40)
         logger.info("Head weights are not loaded because model.checkpoint.load_head is set to False")
