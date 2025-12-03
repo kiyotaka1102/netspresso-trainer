@@ -45,7 +45,7 @@ class RTMCCLoss(nn.Module):
         self.simcc_split_ratio = 2.
         self.input_size = (256, 256)
 
-        self.sigma = (5.66, 5.66)
+        self.sigma = (5, 5)
         self.normalize = False
 
         self.log_softmax = nn.LogSoftmax(dim=1)
@@ -68,7 +68,6 @@ class RTMCCLoss(nn.Module):
     def gaussian_smoothng(self, keypoints):
         keypoints_xy = keypoints[..., :2]
         keypoints_visible = keypoints[..., 2]
-
         N, K, _ = keypoints_xy.shape
         # TODO: Get from config
         w, h = self.input_size
@@ -133,7 +132,7 @@ class RTMCCLoss(nn.Module):
         coord_split = pred.shape[-1] // 2
         pred_x = pred[..., :coord_split]
         pred_y = pred[..., coord_split:]
-
+        # print(keypoints.shape)
         gt_x, gt_y, target_weights = self.gaussian_smoothng(keypoints)
 
         weight = target_weights.reshape(-1) if self.use_target_weight else 1.0

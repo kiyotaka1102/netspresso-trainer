@@ -32,8 +32,25 @@ class PoseEstimationProcessor(BaseTaskProcessor):
     def train_step(self, train_model, batch, optimizer, loss_factory, metric_factory):
         train_model.train()
         images, keypoints = batch['pixel_values'], batch['keypoints']
-        images = torch.stack(images, dim=0)
-        keypoints = torch.stack(keypoints, dim=0)
+
+        if isinstance(images, torch.Tensor) and images.ndim == 4:  # [batch_size, C, H, W]
+            images = images
+        else:
+            images = torch.stack(images, dim=0)
+        
+        if isinstance(keypoints, torch.Tensor):
+            # Nếu đã là tensor (không phải list)
+            if keypoints.dim() == 4 and keypoints.shape[0] == 1:
+                keypoints = keypoints.squeeze(0)
+        elif isinstance(keypoints, (list, tuple)):
+            # Mỗi phần tử có shape [1, 4, 3]
+            keypoints = [kp.squeeze(0) if kp.dim() == 3 and kp.shape[0] == 1 else kp for kp in keypoints]
+            keypoints = torch.stack(keypoints, dim=0)  # [8, 4, 3]
+        else:
+            raise TypeError(f"Unexpected keypoints type: {type(keypoints)}")
+
+        keypoints = keypoints.squeeze(1)
+        # print(keypoints)
         images = images.to(self.devices)
         target = {'keypoints': keypoints.to(self.devices)}
 
@@ -78,9 +95,19 @@ class PoseEstimationProcessor(BaseTaskProcessor):
         eval_model.eval()
         name = batch['name']
         indices, images, keypoints = batch['indices'], batch['pixel_values'], batch['keypoints']
-        indices = torch.stack(indices, dim=0)
-        images = torch.stack(images, dim=0)
-        keypoints = torch.stack(keypoints, dim=0)
+
+        if not isinstance(indices, torch.Tensor):
+            indices = torch.tensor(indices)
+        elif indices.ndim == 0:
+            indices = indices.unsqueeze(0)
+            
+        if not isinstance(images, torch.Tensor) or images.ndim == 3:
+            images = torch.stack(images, dim=0) if isinstance(images, (list, tuple)) else images.unsqueeze(0)
+            
+        if not isinstance(keypoints, torch.Tensor) or keypoints.ndim == 3:
+            keypoints = torch.stack(keypoints, dim=0) if isinstance(keypoints, (list, tuple)) else keypoints.unsqueeze(0)
+        keypoints = keypoints.squeeze(1)
+        # print(keypoints.shape)
         images = images.to(self.devices)
         target = {'keypoints': keypoints.to(self.devices)}
 
@@ -88,7 +115,7 @@ class PoseEstimationProcessor(BaseTaskProcessor):
         loss_factory.calc(out, target, phase='valid')
 
         pred = self.postprocessor(out)
-
+        # print(pred)
         indices = indices.numpy()
         keypoints = keypoints.detach().cpu().numpy()
         if self.conf.distributed:
@@ -121,8 +148,13 @@ class PoseEstimationProcessor(BaseTaskProcessor):
         test_model.eval()
         name = batch['name']
         indices, images = batch['indices'], batch['pixel_values']
-        indices = torch.stack(indices, dim=0)
-        images = torch.stack(images, dim=0)
+        if not isinstance(indices, torch.Tensor):
+            indices = torch.tensor(indices)
+        elif indices.ndim == 0:  # scalar tensor
+            indices = indices.unsqueeze(0)
+            
+        if not isinstance(images, torch.Tensor) or images.ndim == 3:
+            images = torch.stack(images, dim=0) if isinstance(images, (list, tuple)) else images.unsqueeze(0)
         images = images.to(self.devices)
 
         out = test_model(images)
@@ -154,8 +186,10 @@ class PoseEstimationProcessor(BaseTaskProcessor):
 
     def get_metric_with_all_outputs(self, outputs, phase: Literal['train', 'valid'], metric_factory):
         if self.single_gpu_or_rank_zero:
-            pred = np.concatenate([output['pred']for output in outputs], axis=0)
-            keypoints = np.concatenate([output['target']for output in outputs], axis=0)
+            # pred = np.concatenate([output['pred']for output in outputs], axis=0)
+            pred = np.stack(outputs['pred'], axis=0)
+            # keypoints = np.concatenate([output['target']for output in outputs], axis=0)
+            keypoints = np.stack(outputs['target'], axis=0)
             metric_factory.update(pred, keypoints, phase=phase)
 
     def get_predictions(self, results, class_map):

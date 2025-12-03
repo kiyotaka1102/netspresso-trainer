@@ -2,7 +2,7 @@ logging:
   project_id: ~
   output_dir: ./outputs
   tensorboard: true
-  mlflow: false
+  mlflow: true
   stdout: true
   num_save_samples: 16 # num_save_samples should be >= 0 or None
   model_save_options:

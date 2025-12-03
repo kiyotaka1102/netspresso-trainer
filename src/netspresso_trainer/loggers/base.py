@@ -36,7 +36,7 @@ class TrainingLogger():
     def __init__(
         self,
         conf,
-        task: Literal['classification', 'segmentation', 'detection'],
+        task: Literal['classification', 'segmentation', 'detection', 'pose_estimation'],
         model: str,
         class_map: Dict[int, str],
         step_per_epoch: int,
@@ -129,6 +129,7 @@ class TrainingLogger():
         sample_readable['images'] = images
         # TODO: pred and target can be more complex data structure later.
         sample_readable['pred'] = samples['pred'][:self.num_sample_images]
+        # print(sample_readable['pred'])
         sample_readable['pred'] = self.label_converter(sample_readable['images'], sample_readable['pred'])
         if bool(samples['target']):
             sample_readable['target'] = samples['target'][:self.num_sample_images]

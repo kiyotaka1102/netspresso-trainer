@@ -37,7 +37,7 @@ from .custom.image_proc import (
     ToTensor,
     TrivialAugmentWide,
 )
-from .custom.mixing import Mixing
+from .custom.mixing import Mixing, RandomCutmix, RandomMixup
 from .custom.mosaic import MosaicDetection
 
 TRANSFORM_DICT: Dict[str, Callable] = {
@@ -55,6 +55,8 @@ TRANSFORM_DICT: Dict[str, Callable] = {
     'randomzoomout': RandomZoomOut,
     'resize': Resize,
     'mixing': Mixing,
+    'random_mixup': RandomMixup,
+    'random_cutmix': RandomCutmix,
     'mosaicdetection': MosaicDetection,
     'trivialaugmentwide': TrivialAugmentWide,
     'autoaugment': AutoAugment,

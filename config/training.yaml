@@ -5,7 +5,7 @@ training:
   max_norm: ~
   optimizer:
     name: adamw
-    lr: 6e-5
+    lr: 6e-4
     betas: [0.9, 0.999]
     weight_decay: 0.0005
     no_bias_decay: False
@@ -14,6 +14,6 @@ training:
   scheduler:
     name: cosine_no_sgdr
     warmup_epochs: 5
-    warmup_bias_lr: 1e-5
+    warmup_bias_lr: 1e-4
     min_lr: 0.00001
     end_epoch: 25

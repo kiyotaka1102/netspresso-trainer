@@ -167,11 +167,15 @@ class PoseEstimationVisualizer:
     def __init__(self, class_map, pallete=None):
         len(class_map)
 
-    def __call__(self, results, images=None):
+    def __call__(self, images, results):
         return_images = []
+
         for image, result in zip(images, results):
             image = image.copy()
+            # print(result.shape)
+            # result = np.array(result)
             for keypoint in result:
+                # print(keypoint, keypoint.shape)
                 x = round(keypoint[0])
                 y = round(keypoint[1])
                 image = cv2.line(image, (x, y), (x, y), color=(0, 0, 255), thickness=5)

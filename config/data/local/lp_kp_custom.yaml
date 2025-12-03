@@ -1,0 +1,26 @@
+data:
+  name: lp_kp_custom
+  task: pose_estimation
+  format: local
+
+  path:
+    root: /media/hoangtv/0f9d3910-0ff9-406c-92e1-c2c8170ca6f42/huy_aichallenge/CTY/yolo_lp_dataset
+
+    train:
+      image: images/train
+      label: labels/train
+
+    valid:
+      image: images/val
+      label: labels/val
+
+    test:
+      image: images/test
+      label: labels/test
+
+    pattern:
+      image: ~
+      label: ~
+
+  id_mapping: id_mapping.json
+  pallete: ~

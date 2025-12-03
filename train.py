@@ -20,22 +20,22 @@ from netspresso_trainer import train_cli
 def train_with_inline_yaml():
     from netspresso_trainer import train_with_yaml
     logging_dir = train_with_yaml(
-        # gpus="0,1",
-        data="config/data/huggingface/beans.yaml",
-        augmentation="config/augmentation/classification.yaml",
-        model="config/model/resnet/resnet50-classification.yaml",
-        training="config/training.yaml",
-        logging="config/logging.yaml",
-        environment="config/environment.yaml",
+        gpus="0",
+        data="/media/hoangtv/0f9d3910-0ff9-406c-92e1-c2c8170ca6f42/huy_aichallenge/CTY/netspresso-trainer/config/data/local/lp_kp_custom.yaml",
+        augmentation="netspresso-trainer/config/augmentation/pose_estimation.yaml",
+        model="netspresso-trainer/config/model/rtmpose/rtmpose-pose_estimation.yaml",
+        training="netspresso-trainer/config/training.yaml",
+        logging="netspresso-trainer/config/logging.yaml",
+        environment="netspresso-trainer/config/environment.yaml",
         log_level='INFO'
     )
     return logging_dir
 
 
 if __name__ == '__main__':
-    logging_dir = train_cli()
+    # logging_dir = train_cli()
 
     # With inline yaml
-    # logging_dir = train_with_inline_yaml()
+    logging_dir = train_with_inline_yaml()
     
     print(f"Training results are saved at: {logging_dir}")

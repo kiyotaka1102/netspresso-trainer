@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import PIL.Image as Image
+import torch
 import torch.distributed as dist
 from loguru import logger
 from omegaconf import ListConfig
@@ -30,7 +31,10 @@ from omegaconf import ListConfig
 from .base import BaseCustomDataset, BaseSampleLoader
 from .utils.constants import IMG_EXTENSIONS
 from .utils.misc import natural_key
-
+import matplotlib.pyplot as plt
+import cv2
+import numpy as np
+from pathlib import Path
 
 class PoseEstimationSampleLoader(BaseSampleLoader):
     def __init__(self, conf_data, train_valid_split_ratio):
@@ -57,7 +61,16 @@ class PoseEstimationSampleLoader(BaseSampleLoader):
 
             images = sorted(images, key=lambda k: natural_key(k))
             labels = sorted(labels, key=lambda k: natural_key(k))
-            images_and_targets.extend([{'image': str(image), 'label': str(label)} for image, label in zip(images, labels)])
+            # print(labels)
+            # images_and_targets.extend([{'image': str(image), 'label': str(label)} for image, label in zip(images, labels)])
+            images_and_targets.extend([
+                {
+                    'name': Path(image).stem,  
+                    'image': str(image),
+                    'label': str(label)
+                }
+                for image, label in zip(images, labels)
+            ])
 
         else:
             for ext in IMG_EXTENSIONS:
@@ -81,9 +94,15 @@ class PoseEstimationSampleLoader(BaseSampleLoader):
             raise ValueError(f"Invalid id_mapping type: {type(self.conf_data.id_mapping)}")
 
     def load_class_map(self, id_mapping):
-        idx_to_class: Dict[int, str] = dict(enumerate(id_mapping))
+        idx_to_class = {}
+        for idx, item in enumerate(id_mapping):
+            if isinstance(item, dict):
+                # item is already a dict with 'name', 'skeleton', and 'swap'
+                idx_to_class[idx] = item
+            else:
+                # Fallback for simple string-based id_mapping
+                idx_to_class[idx] = {'name': item, 'skeleton': None, 'swap': None}
         return {'idx_to_class': idx_to_class}
-
     def load_huggingface_samples(self):
         raise NotImplementedError
 
@@ -91,7 +110,8 @@ class PoseEstimationSampleLoader(BaseSampleLoader):
 class PoseEstimationCustomDataset(BaseCustomDataset):
 
     def __init__(self, conf_data, conf_augmentation, model_name, idx_to_class,
-                 split, samples, transform=None, **kwargs):
+                 split, samples, transform=None, 
+                 **kwargs):
         super(PoseEstimationCustomDataset, self).__init__(
             conf_data, conf_augmentation, model_name, idx_to_class,
             split, samples, transform, **kwargs
@@ -103,7 +123,14 @@ class PoseEstimationCustomDataset(BaseCustomDataset):
             with open(sample['label'], 'r') as f:
                 lines = f.readlines()
                 f.close()
-            flattened_sample = [{'image': sample['image'], 'label': line.strip()} for line in lines]
+            flattened_sample = [
+                {
+                    'name': sample['name'], 
+                    'image': sample['image'], 
+                    'label': line.strip()
+                } 
+                for line in lines
+            ]
             flattened_samples += flattened_sample
         self.samples = flattened_samples
 
@@ -139,31 +166,38 @@ class PoseEstimationCustomDataset(BaseCustomDataset):
 
     def __getitem__(self, index):
         img = self.samples[index]['image']
+        # print(img)
         ann = self.samples[index]['label'] # TODO: Pose estimation is not assuming that label can be None now
-
+        name = self.samples[index]['name']
         if not self.cache:
             img = Image.open(Path(img)).convert('RGB')
 
         w, h = img.size
 
         outputs = {}
-        outputs.update({'indices': index})
+        outputs.update({'indices': index, 'name': name})
+
         if ann is None:
             out = self.transform(image=img)
             outputs.update({'pixel_values': out['image'], 'org_shape': (h, w)})
             return outputs
 
         ann = ann.split(' ')
-        bbox = ann[-4:]
-        keypoints = ann[:-4]
-
+        bbox = ann[1:5]
+        keypoints = ann[5:]
+        # print(bbox)
         bbox = np.array(bbox).astype('float32')[np.newaxis, ...]
+
         keypoints = np.array(keypoints).reshape(-1, 3).astype('float32')[np.newaxis, ...]
-
+        # print(keypoints.shape)
         out = self.transform(image=img, bbox=bbox, keypoint=keypoints, dataset=self)
-
+    
+        # print(f"Transform output - image type: {type(out['image'])}, shape: {out['image'].shape if isinstance(out['image'], torch.Tensor) else 'Not a tensor'}")
+        # print(f"Transform output - keypoint type: {type(out['keypoint'])}, shape: {out['keypoint'].shape if isinstance(out['keypoint'], torch.Tensor) else 'Not a tensor'}")
+        keypoints_tensor = torch.from_numpy(out['keypoint']).float() if isinstance(out['keypoint'], np.ndarray) else out['keypoint']
         # Use only one instance keypoints
-        outputs.update({'pixel_values': out['image'], 'keypoints': out['keypoint'][0]})
+
+        outputs.update({'pixel_values': out['image'], 'keypoints': keypoints_tensor})
         if self._split in ['train', 'training']:
             return outputs
 
